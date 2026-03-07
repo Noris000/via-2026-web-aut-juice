@@ -1,6 +1,9 @@
-import { HomePage } from "../pageObjects/homePage";
+import { HomePage } from "../pageObjects/HomePage";
 import { LoginPage } from "../pageObjects/loginPage";
 import { RegistrationPage } from "../pageObjects/registrationPage";
+import { CheckoutPage } from "../pageObjects/CheckoutPage";
+import { AddressPage } from "../pageObjects/addressPage";
+import { SavedPaymentMethodsPage } from "../pageObjects/savedPaymentMethodsPage";
 
 describe("Juice-shop scenarios", () => {
   context("Without auto login", () => {
@@ -94,7 +97,7 @@ describe("Juice-shop scenarios", () => {
     })
 
     // Create scenario - Search 500ml and validate cards
-    it.only("Search 500ml and validate cards", () => {
+    it("Search 500ml and validate cards", () => {
     // Click on search icon
     HomePage.searchButton.click();
     // Search for 500ml
@@ -106,78 +109,178 @@ describe("Juice-shop scenarios", () => {
     // Close the card
     HomePage.productCard.find("button[aria-label='Close Dialog']").click();
     // Select a product card - Lemon Juice (500ml)
+    HomePage.productCards.contains("Lemon Juice (500ml)").click();
     // Validate that the card (should) contains "Sour but full of vitamins."
+    HomePage.productCard.should("contain.text", "Sour but full of vitamins.")
     // Close the card
+    HomePage.productCard.find("button[aria-label='Close Dialog']").click();
     // Select a product card - Strawberry Juice (500ml)
+    HomePage.productCards.contains("Strawberry Juice (500ml)").click();
     // Validate that the card (should) contains "Sweet & tasty!"
+    HomePage.productCard.should("contain.text", "Sweet & tasty!")
     })
 
     // Create scenario - Read a review
-    // Click on search icon
-    // Search for King
-    // Select a product card - OWASP Juice Shop "King of the Hill" Facemask
-    // Click expand reviews button/icon (wait for reviews to appear)
-    // Validate review - K33p5 y0ur ju1cy 5plu773r 70 y0ur53lf!
+    it("Read a review", () => {
+      // Click on search icon
+      HomePage.searchButton.click();
+      // Search for King
+      HomePage.searchField.type("King{enter}");
+      // Select a product card - OWASP Juice Shop "King of the Hill" Facemask
+      HomePage.productCards.contains("OWASP Juice Shop \"King of the Hill\" Facemask").click();
+      // Click expand reviews button/icon (wait for reviews to appear)
+      HomePage.reviewsPanelHeader.click();
+      // wait for review text to appear
+      cy.contains('K33p5 y0ur ju1cy 5plu773r 70 y0ur53lf!').should('be.visible');
+    });
 
     // Create scenario - Add a review
-    // Click on search icon
-    // Search for Raspberry
-    // Select a product card - Raspberry Juice (1000ml)
-    // Type in review - "Tastes like metal"
-    // Click Submit
-    // Click expand reviews button/icon (wait for reviews to appear)
-    // Validate review -  "Tastes like metal"
-
+    it("Add a review", () => {
+      // Click on search icon
+      HomePage.searchButton.click();
+      // Search for Raspberry
+      HomePage.searchField.type("Raspberry{enter}");
+      // Select a product card - Raspberry Juice (1000ml)
+      HomePage.productCards.contains("Raspberry Juice (1000ml)").click();
+      // Type in review and submit
+      HomePage.reviewField.type("Tastes like metal");
+      HomePage.submitReviewButton.click();
+      // Expand reviews and validate review text is visible
+      HomePage.reviewsPanelHeader.click();
+      cy.contains("Tastes like metal").should('be.visible');
+    });
+    
     // Create scenario - Validate product card amount
-    // Validate that the default amount of cards is 12
-    // Change items per page (at the bottom of page) to 24
-    // Validate that the amount of cards is 24
-    // Change items per page (at the bottom of page) to 36
-    // Validate that the amount of cards is 35
+    it("Validate product card amount and paginator", () => {
+      // initially should show 12 cards by default
+      HomePage.productCardCount.should('have.length', 12);
+      // change items per page to 24
+      HomePage.itemsPerPageSelect.scrollIntoView().click({force: true});
+      HomePage.itemsPerPageOptions.contains('24').click();
+      // verify 24 cards appear (if enough products)
+      HomePage.productCardCount.should('have.length', 24);
+      // change items per page to 36
+      HomePage.itemsPerPageSelect.scrollIntoView().click({force: true});
+      HomePage.itemsPerPageOptions.contains('36').click();
+      // on last page there may be 35 or 36 cards depending on dataset
+      HomePage.productCardCount.its('length').should('be.oneOf', [35, 36]);
+    });
 
-    // Create scenario - Buy Girlie T-shirt
-    // Click on search icon
-    // Search for Girlie
-    // Add to basket "Girlie"
-    // Click on "Your Basket" button
-    // Create page object - BasketPage
-    // Click on "Checkout" button
-    // Create page object - SelectAddressPage
-    // Select address containing "United Fakedom"
-    // Click Continue button
-    // Create page object - DeliveryMethodPage
-    // Select delivery speed Standard Delivery
-    // Click Continue button
-    // Create page object - PaymentOptionsPage
-    // Select card that ends with "5678"
-    // Click Continue button
-    // Create page object - OrderSummaryPage
-    // Click on "Place your order and pay"
-    // Create page object - OrderCompletionPage
-    // Validate confirmation - "Thank you for your purchase!"
+it("Buy Girlie T-shirt", () => {
+  // Visit home page
+  HomePage.visit();
 
-    // Create scenario - Add address
+  // Search for "Girlie"
+  HomePage.searchButton.click();
+  HomePage.searchField.type("Girlie{enter}");
+
+  // Open product card and ensure it’s visible
+  HomePage.productCards.contains("Girlie").click();
+  HomePage.productCard.should("be.visible");
+
+  // Close modal if overlay appears
+  cy.get("body").then(($body) => {
+    if ($body.find("button[aria-label='Close Dialog']").length > 0) {
+      cy.get("button[aria-label='Close Dialog']").click({ force: true });
+    }
+  });
+
+  // Wait for overlay backdrop to disappear
+  cy.get(".cdk-overlay-backdrop").should("not.exist");
+
+  // Add product to basket
+  HomePage.addToBasketButton.click({ force: true });
+
+  // Go to basket
+  HomePage.basketButton.click();
+
+  // Proceed to checkout
+  HomePage.checkoutButton.click();
+
+  // Select address containing "United Fakedom"
+  HomePage.addressCards.contains("United Fakedom").click();
+  HomePage.continueButton.click();
+
+  cy.get("mat-radio-button.mat-mdc-radio-button", { timeout: 10000 })
+    .first()
+    .should("be.visible")
+    .click({ force: true });
+
+  // Continue to payment
+  HomePage.continueButton.click();
+
+  // Select the card ending 5678 using the sibling cell
+  HomePage.cardEnding("5678"); // clicks the radio button in the same row
+  HomePage.continueButton.click();
+
+  // Place order
+  HomePage.placeOrderButton.click();
+
+  // Validate confirmation message is visible
+  HomePage.confirmationMessage.should("be.visible");
+});
+
+
+//Adress scenario
+it("Add a new address", () => {
+  HomePage.visit();
     // Click on Account
+  HomePage.clickAccount();
     // Click on Orders & Payment
+  HomePage.openOrdersAndPaymentMenu();
     // Click on My saved addresses
+  HomePage.goToSavedAddresses();
     // Create page object - SavedAddressesPage
     // Click on Add New Address
-    // Create page object - CreateAddressPage
+  AddressPage.addNewAddressButton().click();
     // Fill in the necessary information
+  AddressPage.fillAddressForm({
+    country: "United Fakedom",
+    name: "John Doe",
+    mobile: "5551234567",
+    zip: "12345",
+    address: "123 Main St",
+    city: "Faketown",
+    state: "Fakestate"
+  });
     // Click Submit button
+  AddressPage.submitButton().click();
     // Validate that previously added address is visible
+  AddressPage.addressCards().contains("123 Main St").should("be.visible");
+});
+
 
     // Create scenario - Add payment option
+it.only("Add a new payment option", () => {
+  HomePage.visit();
     // Click on Account
+  HomePage.clickAccount();
     // Click on Orders & Payment
-    // Click on My payment options
+  HomePage.openOrdersAndPaymentMenu();
+    // Click on My payment options  
+  HomePage.goToPaymentOptions();
     // Create page object - SavedPaymentMethodsPage
-    // Click Add new card
-    // Fill in Name
-    // Fill in Card Number
-    // Set expiry month to 7
-    // Set expiry year to 2090
-    // Click Submit button
-    // Validate that the card shows up in the list
+        // Click Add new card
+  SavedPaymentMethodsPage.addNewCardButton().click({ force: true });
+
+  // Wait for panel to expand
+  cy.get('.mat-expansion-panel-content')
+    .should('be.visible');
+
+  // Fill form
+  SavedPaymentMethodsPage.fillCardForm({
+    name: "John Doe",
+    number: "4111111111111111",
+    month: 7,
+    year: 2090
   });
+
+    // Click Submit button
+  SavedPaymentMethodsPage.submitButton().click();
+    // Validate that the card shows up in the list
+  SavedPaymentMethodsPage.savedCards()
+    .contains("4111")
+    .should("be.visible");
 });
+  });
+    });

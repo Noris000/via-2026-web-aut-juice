@@ -8,11 +8,8 @@ export class LoginPage extends BasePage {
   static get elementName() {
     return cy.get("elementSelector");
   }
-<<<<<<< HEAD
-}
-=======
-
-  static get emailField()
+  
+    static get emailField()
   {
     return cy.get("#email")
   }
@@ -31,4 +28,3 @@ export class LoginPage extends BasePage {
     return cy.get("[href='#/register']")
   }
 }
->>>>>>> bd2edea (new commit)
